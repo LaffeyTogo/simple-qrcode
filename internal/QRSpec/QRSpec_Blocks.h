@@ -1,3 +1,34 @@
+/*
+* ============================================================================
+* QRSpec_Blocks.h
+* ----------------------------------------------------------------------------
+* QR Code block structure definitions (ISO/IEC 18004).
+*
+* This file contains static tables describing how data and error
+* correction codewords are split into blocks for each QR version
+* and ECC level.
+* ----------------------------------------------------------------------------
+* Data source:
+*  - ISO/IEC 18004:2015
+*    Table 9 - Error correction characteristics
+* ----------------------------------------------------------------------------
+* Structure:
+*  - For each version (1 - 40)
+*  - For each ECC level (L, M, Q, H)
+*  - Defines how codewords are split into:
+*		* Length of ECC
+*		* Small blocks
+*		* Small blocks length
+*		* Large blocks
+*		* Large blocks length(one byte longer)
+* -----------------------------------------------------------------------------
+* Notes:
+*  - This is a direct mapping of specification tables
+* -----------------------------------------------------------------------------
+* Warning:
+*	- Do NOT modify table values unless updating to a new spec version
+* =============================================================================
+*/
 #pragma once
 #include <cstdint>
 
@@ -64,7 +95,4 @@ namespace QRSpec_Internal
 		{{{ 30, 20,117,  4,118},{ 28, 40, 47,  7, 48},{ 30, 43, 24, 22, 25},{ 30, 10, 15, 67, 16}}},
 		{{{ 30, 19,118,  6,119},{ 28, 18, 47, 31, 48},{ 30, 34, 24, 34, 25},{ 30, 20, 15, 61, 16}}}
 	} };
-
-
-
 }

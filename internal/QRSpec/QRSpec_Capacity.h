@@ -1,3 +1,38 @@
+/*
+* =============================================================================
+* QR Code capacity and data length specification tables.
+* ----------------------------------------------------------------------------
+* Source:
+*   ISO/IEC 18004:2015
+*   - Table 7: Number of symbol characters and input data capacity for QR Code
+*   - Related tables: Data codeword capacity per version
+* ----------------------------------------------------------------------------
+* Description:
+*   This file contains precomputed lookup tables describing:
+*
+*   1. Maximum number of input characters for each:
+*        - Version (1 - 40)
+*        - Encoding mode (NUMERIC, ALPHANUMERIC, BYTE, KANJI)
+*        - Error correction level (L, M, Q, H)
+*
+*   2. Total number of data codewords available per:
+*        - Version
+*        - Error correction level
+* ----------------------------------------------------------------------------
+* Data layout:
+*   - Version index:        [0..39]   => Version 1..40
+*   - Mode index:           [0..3]    => NUMERIC, ALPHA, BYTE, KANJI
+*   - ECC index:            [0..3]    => L, M, Q, H
+* ----------------------------------------------------------------------------
+* Notes:
+*   - These tables are static and directly derived from the ISO specification.
+*   - No runtime computation is performed.
+*   - Used by QRSpec API for capacity checking and version selection.
+* ----------------------------------------------------------------------------
+* Warning:
+*	- Do NOT modify table values unless updating to a new spec version
+* =============================================================================
+*/
 #pragma once
 namespace QRSpec_Internal
 {
@@ -56,7 +91,7 @@ namespace QRSpec_Internal
 		{{{6479, 5039, 3599, 2735},{3927, 3054, 2181, 1658},{2699, 2022, 1431, 1139},{1661, 1292, 923,  923 }}},
 		{{{6743, 5313, 3791, 2927},{4087, 3220, 2298, 1774},{2809, 2113, 1499, 1219},{1729, 1362, 972,  972 }}},
 		{{{7089, 5596, 3993, 3057},{4296, 3391, 2420, 1852},{2953, 2238, 1579, 1273},{1817, 1435, 1024, 1024}}}  // 40
-	} };
+	}};
 
 
 

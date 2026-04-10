@@ -1,7 +1,57 @@
+/*
+* ====================================================================================
+* StructureBuilder.h
+* QR Code module placement and template construction stage
+* ------------------------------------------------------------------------------------
+* This file is responsible for constructing the QR matrix layout, including:
+*   - Function patterns (Finder / Alignment / Timing)
+*   - Format & Version information areas
+*   - Final placement of data codewords
+*   - Reserve and fill format / version information areas
+*   - Fill data bits into remaining modules (zigzag scan)
+* ------------------------------------------------------------------------------------
+* Core concepts:
+*   Function patterns:
+*       - Finder patterns: 3 large position markers
+*       - Alignment patterns: smaller position correction markers
+*       - Timing patterns: alternating lines for coordinate reference
+*   Data placement:
+*       - Codewords are written bit-by-bit
+*       - Traversal follows zigzag pattern (right -> left, vertical scan)
+*       - Skips all reserved / function modules
+*   Format / Version info:
+*       - Encodes ECC level and mask pattern
+*       - Placed in predefined fixed positions
+* ------------------------------------------------------------------------------------
+* Specification:
+*   - Based on ISO/IEC 18004
+*   - Corresponds to "Module Placement in Matrix" stage
+* ====================================================================================
+*/
 #pragma once
 #include "QRMatrix.h"
 #include "QRSpec.h"
 
+
+
+
+
+/*
+* Reserve format information areas in the QR matrix
+*
+* Marks the positions used to store format information (ECC level + mask pattern).
+* These modules are reserved before actual format bits are written.
+*
+* Placement includes:
+*	- Top-left (horizontal & vertical around finder)
+*   - Top-right (horizontal)
+*   - Bottom-left (vertical)
+*   - Dark module (fixed black module)
+*
+* Notes:
+*   - Uses placeholder markers to prevent data overwrite
+*   - Actual format bits are filled later by SetupFormatInfo()
+*/
 void SetupFormatHolder(QRMatrix& m)
 {
 	uint32_t i;
@@ -39,15 +89,28 @@ void SetupFormatHolder(QRMatrix& m)
 
 
 
+/*
+* Place version information bits into the matrix
+*
+* Writes 18-bit version information into two fixed regions:
+*	- Top-right area
+*	- Bottom-left area
+*
+* Only applies to version >= 7 (per QR specification).
+*
+* Notes:
+*	- Bits are retrieved from QRSpec
+*	- Written in predefined 3x6 blocks
+*/
 void SetupVersionInfo(QRMatrix& m, int version)
 {
 	QRMatrix_Operator Matrix(m);
-
+	
 	if (version < 7)
 		return;
 
 	const int size = m.GetSide();
-	const char(&bits)[18] = QRSpec::GetVersionInfo(version);
+	const char (&bits)[18] = QRSpec::GetVersionInfo(version);
 
 	int bitIndex = 0;
 
@@ -67,7 +130,7 @@ void SetupVersionInfo(QRMatrix& m, int version)
 	{
 		for (int j = 0; j < 3; ++j)
 		{
-			Matrix.SetTemplate(i, size - 11 + j, bits[bitIndex++]);
+			Matrix.SetTemplate(i, size - 11 + j,bits[bitIndex++]);
 		}
 	}
 }
@@ -76,6 +139,17 @@ void SetupVersionInfo(QRMatrix& m, int version)
 
 
 
+/*
+* Place a single alignment pattern
+*
+* Writes a 5x5 alignment pattern centered at (cx, cy).
+* Alignment patterns improve decoding robustness for distortion.
+*
+* Notes:
+*   - Skips placement if the target area is already occupied
+*     (e.g. overlaps with finder patterns)
+*   - Pattern structure is fixed (per QR standard)
+*/
 void SetupAlignment(QRMatrix& m, uint32_t cx, uint32_t cy)
 {
 	QRMatrix_Operator Matrix(m);
@@ -88,8 +162,8 @@ void SetupAlignment(QRMatrix& m, uint32_t cx, uint32_t cy)
 		{1,0,0,0,1},
 		{1,1,1,1,1}
 	};
-
-	if (m.GetPixel(cx, cy) == 0)
+	
+	if(m.GetPixel(cx, cy) == 0)
 	{
 		for (uint32_t dy = 0; dy < 5; dy++)
 		{
@@ -106,6 +180,17 @@ void SetupAlignment(QRMatrix& m, uint32_t cx, uint32_t cy)
 
 
 
+/*
+* Place a single alignment pattern
+*
+* Writes a 5x5 alignment pattern centered at (cx, cy).
+* Alignment patterns improve decoding robustness for distortion.
+*
+* Notes:
+*   - Skips placement if the target area is already occupied
+*     (e.g. overlaps with finder patterns)
+*   - Pattern structure is fixed (per QR standard)
+*/
 void SetupFinder(QRMatrix& m, uint32_t cx, uint32_t cy)
 {
 	QRMatrix_Operator Matrix(m);
@@ -127,7 +212,7 @@ void SetupFinder(QRMatrix& m, uint32_t cx, uint32_t cy)
 	{
 		for (uint32_t dx = 0; dx < 9; dx++)
 		{
-			if (cx - 4u + dx < m.GetSide() && cy - 4u + dy < m.GetSide())
+			if (cx - 4u + dx < m.GetSide() && cy - 4u + dy < m.GetSide() )
 				Matrix.SetTemplate(cx - 4u + dx, cy - 4u + dy, pattern[dy][dx]);
 		}
 	}
@@ -137,6 +222,19 @@ void SetupFinder(QRMatrix& m, uint32_t cx, uint32_t cy)
 
 
 
+/*
+* Place timing patterns (horizontal and vertical)
+*
+* Writes alternating black/white modules along:
+*   - Row 6 (horizontal)
+*   - Column 6 (vertical)
+*
+* Used as a coordinate reference for decoding.
+*
+* Notes:
+*   - Pattern alternates every module (1,0,1,0,...)
+*   - Skips finder and reserved areas implicitly
+*/
 void SetupTimingPattern(QRMatrix& m) noexcept
 {
 	const uint32_t Side = m.GetSide();
@@ -161,6 +259,20 @@ void SetupTimingPattern(QRMatrix& m) noexcept
 
 
 
+/*
+* Place data bits into the QR matrix
+*
+* Fills the matrix with data codewords using zigzag scanning:
+*   - Starts from bottom-right
+*   - Moves in vertical stripes (2 columns at a time)
+*   - Alternates direction (up/down)
+*
+* Notes:
+*   - Bits are written MSB-first per byte
+*   - Only writes into empty modules (skips function patterns)
+*   - Column 6 is skipped (timing pattern)
+*   - Remaining unused bits are padded with 0
+*/
 void SetupFinalCodeword(QRMatrix& m, std::vector<uint8_t>& codeword)
 {
 	int side = m.GetSide();
@@ -215,14 +327,29 @@ void SetupFinalCodeword(QRMatrix& m, std::vector<uint8_t>& codeword)
 
 
 
-void Filltemplate(QRMatrix& m, uint32_t version, std::vector<uint8_t>& codeword)
+/*
+* Build full QR template and place all data
+*
+* High-level orchestration function that constructs the QR matrix:
+*   1. Place finder patterns
+*   2. Place alignment patterns
+*   3. Place timing patterns
+*   4. Place version information (if applicable)
+*   5. Reserve format information areas
+*   6. Fill data codewords
+*
+* Notes:
+*   - Does NOT apply masking
+*   - Format info bits are reserved but not written here
+*/
+void Filltemplate(QRMatrix& m , uint32_t version, std::vector<uint8_t>& codeword)
 {
 	// SetupFinder
 	SetupFinder(m, 3, 3);
 	SetupFinder(m, m.GetSide() - 4, 3);
 	SetupFinder(m, 3, m.GetSide() - 4);
-
-
+	
+	
 	// SetupAlignment
 	uint32_t AlignmentStep = QRSpec::GetAlignmentStep(version);
 	for (uint32_t Y = 0; Y < AlignmentStep; Y++)
@@ -245,7 +372,7 @@ void Filltemplate(QRMatrix& m, uint32_t version, std::vector<uint8_t>& codeword)
 	// Format holder
 	SetupFormatHolder(m);
 
-
+	
 	// FinalCodeword
 	SetupFinalCodeword(m, codeword);
 }
@@ -254,9 +381,22 @@ void Filltemplate(QRMatrix& m, uint32_t version, std::vector<uint8_t>& codeword)
 
 
 
+/*
+* Write format information bits into reserved areas
+*
+* Encodes and places 15-bit format information, including:
+*   - Error correction level
+*   - Mask pattern ID
+*
+* Notes:
+*   - Writes into areas reserved by SetupFormatHolder()
+*   - Bits are placed in mirrored positions:
+*       top-left, top-right, bottom-left
+*   - Bit order follows QR specification
+*/
 void SetupFormatInfo(QRMatrix& m, uint32_t MaskID, QREccLevel ecc)
 {
-	uint32_t i, Counter;
+	uint32_t i ,Counter;
 	uint32_t side = m.GetSide();
 	const char(&bits)[15] = QRSpec::GetFormatInfo(MaskID, ecc);
 	QRMatrix_Operator Matrix(m);
@@ -278,7 +418,7 @@ void SetupFormatInfo(QRMatrix& m, uint32_t MaskID, QREccLevel ecc)
 	// Bottom left
 	for (i = side - 7, Counter = 6; i <= side - 1; i++, Counter--)
 		Matrix.SetTemplate(8, i, bits[Counter]);
-
+		 
 
 	// Upper right
 	for (i = side - 8, Counter = 7; i <= side - 1; i++, Counter++)
