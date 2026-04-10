@@ -1,7 +1,7 @@
 ## Simple QR Code Generator (C++)
 This repository demonstrates how a QR Code generator works internally.
 A minimal and readable implementation of the QR Code standard.
-Designed for learning and understanding how QR Codes algorithm work.
+Designed for share and understanding how QR Codes algorithm work.
 
 This project is a **simple and educational implementation of QR Code generation**.
 
@@ -25,41 +25,6 @@ This implementation follows several principles:
 - step-by-step construction
 - Header-only
 
-## Features
-
-- QR Code encoding(Currently, only Byte mode encoding is available.)
-- Error correction (Reed–Solomon)
-- Modular matrix construction
-- Mask pattern evaluation
-- Format and version information
-
-## Project Structure
-
-/include
-	QRcreator.h				Main encoding pipeline
-
-/internal
-	/byte
-		ByteEncoder.h			Convert to bitstream		
-		FinalStream.h			Intertwined
-		/ECC
-			ECCCalculator.h	Reed-Solomon error correction
-			
-	/Mask
-		Mask.h				Mask evaluation
-	
-	/QRSpec
-		QRSpec.h				Constants provided by ISO/IEC 18004:2015 simplify calculations during generation.
-		QRSpec_Blocks.h
-		QRSpec_Capacity.h
-		QRSpec_Patterns.h
-	
-	/Structure
-		StructureBuilder.h		Draw a fixed template	
-
-/demo
-	main.cpp 					Simple demo				
-
 ## Encoding Pipeline
 
 The QR code is generated in several clear steps:
@@ -71,6 +36,28 @@ The QR code is generated in several clear steps:
 5. Select the best mask
 6. Write format information
 
+## Project Structure
+.
+├── include
+│   └── QRcreator.h					Main encoding pipeline
+├── internal
+│   ├── byte
+│   │   ├── ByteEncoder.h			Convert to bitstream
+│   │   ├── FinalStream.h			Intertwined
+│   │   └── ECC
+│   │       └── ECCCalculator.h		Reed-Solomon error correction
+│   ├── Mask
+│   │   └── Mask.h					Mask evaluation
+│   ├── QRSpec
+│   │   ├── QRSpec.h				Constants provided by ISO/IEC 18004:2015 simplify calculations during generation.
+│   │   ├── QRSpec_Blocks.h
+│   │   ├── QRSpec_Capacity.h
+│   │   └── QRSpec_Patterns.h
+│   └── Structure
+│       └── StructureBuilder.h		Draw a fixed template
+└── demo
+    └── main.cpp					Simple demo
+	
 ## Reference
 
 ISO/IEC 18004:2015
