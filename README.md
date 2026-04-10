@@ -57,7 +57,7 @@ The QR code is generated in several clear steps:
 │       └── StructureBuilder.h		Draw a fixed template
 └── demo
     └── main.cpp					Simple demo
-	
+
 ## Reference
 
 ISO/IEC 18004:2015
